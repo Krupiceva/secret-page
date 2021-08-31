@@ -36,7 +36,7 @@ app.use(express.static("public"));
 
 //Create session
 app.use(session({
-  secret: "Nasa mala tajnica.",
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }));
@@ -47,10 +47,13 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 //Database initialization
-mongoose.connect("mongodb://localhost:27017/userDB", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+// mongoose.connect("mongodb://localhost:27017/userDB", {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true
+// });
+
+const dbURI = "mongodb+srv://admin-krupiceva:" + process.env.MONGO_DB_ATLAS_PASS + "@cluster0.pra2j.mongodb.net/userDB"
+mongoose.connect(dbURI, {useNewUrlParser: true, useUnifiedTopology: true});
 
 //User Schema
 const userSchema = new mongoose.Schema({
