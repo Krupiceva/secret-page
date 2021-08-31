@@ -55,16 +55,18 @@ app.use(passport.session());
 const dbURI = "mongodb+srv://admin-krupiceva:" + process.env.MONGO_DB_ATLAS_PASS + "@cluster0.pra2j.mongodb.net/userDB"
 mongoose.connect(dbURI, {useNewUrlParser: true, useUnifiedTopology: true});
 
-//User Schema
 const userSchema = new mongoose.Schema({
-  email: String,
-  password: String,
-  googleId: String,
-  secret: String
+    username: { type: String, unique: true }, // values: email address, googleId
+    password: String,
+    provider: String, // values: 'local', 'google'
+    email: String,
+    secret: String
 });
 
 //Use passport-local-mongoose with User Schema
-userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(passportLocalMongoose, {
+  usernameField: "username"
+});
 
 //Use mongoose-findorcreate with User userSchema
 userSchema.plugin(findOrCreate);
@@ -91,8 +93,14 @@ passport.use(new GoogleStrategy({
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
-      return cb(err, user);
+    User.findOrCreate(
+      { username: profile.id },
+      {
+        provider: "google",
+        email: profile._json.email
+      },
+      function (err, user) {
+        return cb(err, user);
     });
   }
 ));
@@ -104,7 +112,7 @@ app.get("/", function(req, res) {
 
 //Authentication route
 app.get("/auth/google",
-  passport.authenticate("google", { scope: ["profile"] })
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 //If user is successffuly authenticate then rediret him to secret page
 app.get("/auth/google/secrets",
@@ -176,7 +184,9 @@ app.route("/register")
     // });
 
     /*****Version with passport-local-mongoose******/
-    User.register({username: req.body.username}, req.body.password, function(err, user){
+    const username = req.body.username;
+    const password = req.body.password;
+    User.register({username: username, email: username, provider: "local"}, password, function(err, user){
       if(err){
         console.log(err);
         res.redirect("/register");
